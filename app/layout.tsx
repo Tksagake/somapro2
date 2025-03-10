@@ -19,7 +19,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <AuthProvider>
           <AuthRouter>
             <ClientLayout>
-              <LayoutWrapper>{children}</LayoutWrapper>
+              {children}
             </ClientLayout>
           </AuthRouter>
         </AuthProvider>

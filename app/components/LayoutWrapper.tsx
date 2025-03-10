@@ -8,8 +8,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   return (
     <div className="flex h-screen">
-      {!hideSidebar && <Sidebar />} 
-      <main className={`flex-1 p-6 ${hideSidebar ? "ml-0" : "ml-64"} bg-gray-100`}>
+      {!hideSidebar && <Sidebar />}
+      <main className="flex-1 p-6 bg-blue-100">
         {children}
       </main>
     </div>

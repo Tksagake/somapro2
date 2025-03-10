@@ -1,6 +1,5 @@
 ﻿import { FaChartLine, FaShoppingCart, FaUsers } from "react-icons/fa";
-import LayoutWrapper from "../components/LayoutWrapper"; // Adjust import path if needed
-
+import LayoutWrapper from "../components/LayoutWrapper";
 const Dashboard = () => {
   const stats = [
     { title: "Revenue", value: "$12,000", color: "bg-blue-500", icon: <FaChartLine /> },
@@ -15,8 +14,9 @@ const Dashboard = () => {
   ];
 
   return (
-    
-      <div className="p-8">
+    <LayoutWrapper>
+    <div className="flex flex-grow p-8">
+      <div className="w-full">
         <h1 className="text-3xl font-bold text-white">Dashboard Overview</h1>
 
         {/* Stats Section */}
@@ -56,7 +56,8 @@ const Dashboard = () => {
           </table>
         </div>
       </div>
-   
+    </div>
+    </LayoutWrapper>
   );
 };
 
