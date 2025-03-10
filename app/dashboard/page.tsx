@@ -1,58 +1,63 @@
-﻿"use client";
+﻿import { FaChartLine, FaShoppingCart, FaUsers } from "react-icons/fa";
+import LayoutWrapper from "../components/LayoutWrapper"; // Adjust import path if needed
 
-import { FiUsers, FiDollarSign, FiBookOpen } from "react-icons/fi";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
+const Dashboard = () => {
+  const stats = [
+    { title: "Revenue", value: "$12,000", color: "bg-blue-500", icon: <FaChartLine /> },
+    { title: "Sales", value: "1,200", color: "bg-green-500", icon: <FaShoppingCart /> },
+    { title: "Customers", value: "300", color: "bg-red-500", icon: <FaUsers /> },
+  ];
 
-const stats = [
-  { title: "Total Students", value: "1,200", icon: <FiUsers /> },
-  { title: "Total Revenue", value: "$45,000", icon: <FiDollarSign /> },
-  { title: "Active Teachers", value: "35", icon: <FiBookOpen /> },
-];
+  const revenueData = [
+    { month: "Jan", revenue: 4000 },
+    { month: "Feb", revenue: 3000 },
+    { month: "Mar", revenue: 2000 },
+  ];
 
-const data = [
-  { month: "Jan", revenue: 5000 },
-  { month: "Feb", revenue: 8000 },
-  { month: "Mar", revenue: 6000 },
-  { month: "Apr", revenue: 9000 },
-  { month: "May", revenue: 7500 },
-];
-
-export default function Dashboard() {
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 ml-64 p-6 bg-gray-100 min-h-screen">
-        <Navbar />
+    
+      <div className="p-8">
+        <h1 className="text-3xl font-bold text-white">Dashboard Overview</h1>
 
-        {/* Stats Cards */}
-        <div className="mt-20 grid grid-cols-3 gap-6">
+        {/* Stats Section */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {stats.map((stat, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4">
-              <div className="text-3xl text-gray-700">{stat.icon}</div>
+            <div
+              key={index}
+              className={`${stat.color} p-6 rounded-xl shadow-lg flex items-center space-x-4 transition hover:scale-105`}
+            >
+              <div className="text-white text-4xl">{stat.icon}</div>
               <div>
-                <p className="text-gray-600">{stat.title}</p>
-                <h3 className="text-2xl font-semibold">{stat.value}</h3>
+                <p className="text-white text-lg">{stat.title}</p>
+                <h3 className="text-white text-3xl font-semibold">{stat.value}</h3>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Charts Section */}
-        <div className="mt-10 bg-white p-6 rounded-lg shadow-md">
+        {/* Revenue Table */}
+        <div className="mt-10 bg-gray-800 p-6 rounded-xl shadow-md w-full">
           <h3 className="text-lg font-semibold mb-4">Revenue Over Time</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="revenue" stroke="#007bff" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th className="border-b border-gray-700 p-3">Month</th>
+                <th className="border-b border-gray-700 p-3">Revenue ($)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {revenueData.map((item, index) => (
+                <tr key={index} className="hover:bg-gray-700 transition">
+                  <td className="p-3">{item.month}</td>
+                  <td className="p-3">{item.revenue.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
+   
   );
-}
+};
+
+export default Dashboard;

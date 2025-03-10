@@ -1,7 +1,9 @@
 import { Inter } from "next/font/google";
-import ClientLayout from "./components/ClientLayout"; // Handles client-side logic
+import ClientLayout from "./components/ClientLayout";
 import { AuthProvider } from "./context/AuthContext";
-import "./globals.css"; 
+import AuthRouter from "./context/AuthRouter";
+import LayoutWrapper from "./components/LayoutWrapper"; // Import the wrapper
+import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -10,12 +12,16 @@ export const metadata = {
   description: "School Management System",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}> {/* ✅ Styling is still applied */}
+      <body className={`${inter.className} bg-gray-100`}>
         <AuthProvider>
-          <ClientLayout>{children}</ClientLayout>
+          <AuthRouter>
+            <ClientLayout>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </ClientLayout>
+          </AuthRouter>
         </AuthProvider>
       </body>
     </html>
