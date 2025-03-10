@@ -5,60 +5,58 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 type AuthContextType = {
   user: any;
+  role: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const getUser = async () => {
+    const getUserData = async () => {
       const { data } = await supabase.auth.getUser();
       setUser(data.user);
+
+      if (data.user) {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("roles(name)")
+          .eq("id", data.user.id)
+          .single();
+
+        setRole(userData?.roles?.[0]?.name || null);
+      }
     };
-    getUser();
+
+    getUserData();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    const { data } = await supabase.auth.getUser();
     setUser(data.user);
-  };
-  const getUserRole = async (userId: string) => {
-    const { data, error } = await supabase
+
+    const { data: userData } = await supabase
       .from("users")
-      .select("role_id, roles(name)")
-      .eq("id", userId)
+      .select("roles(name)")
+      .eq("id", data.user.id)
       .single();
-  
-    if (error) return null;
-    return data?.roles?.[0]?.name;
+
+    setRole(userData?.roles?.[0]?.name || null);
   };
-  
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
-  };
-
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-      },
-    });
-    if (error) throw error;
+    setRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signOut, signUp }}>
+    <AuthContext.Provider value={{ user, role, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
