@@ -71,19 +71,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (error) throw error;
     setUser(data.user);
 
-    // Fetch user role
+    // ✅ Fetch user role from public.users
     const { data: userData } = await supabase
       .from("users")
-      .select("roles(name)")
+      .select("role_id")
       .eq("id", data.user.id)
       .single();
 
-    const role = userData?.roles?.[0]?.name;
-    if (role !== "Teacher" && role !== "Admin") {
+    if (!userData || !userData.role_id) {
       throw new Error("You are not authorized to log in.");
     }
 
-    setRole(role);
+    // ✅ Get role name from roles table
+    const { data: roleData } = await supabase
+      .from("roles")
+      .select("name")
+      .eq("id", userData.role_id)
+      .single();
+
+    if (!roleData || (roleData.name !== "Teacher" && roleData.name !== "Admin")) {
+      throw new Error("You are not authorized to log in.");
+    }
+
+    setRole(roleData.name);
   };
 
   const signOut = async () => {
