@@ -17,7 +17,7 @@ const Dashboard = () => {
     <LayoutWrapper>
     <div className="flex flex-grow p-8">
       <div className="w-full">
-        <h1 className="text-3xl font-bold text-white">Dashboard Overview</h1>
+        <h1 className="text-3xl font-bold text-black">Dashboard Overview</h1>
 
         {/* Stats Section */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">

@@ -1,9 +1,16 @@
-﻿"use client";
+﻿import { FaChartLine, FaShoppingCart, FaUsers } from "react-icons/fa";
+import LayoutWrapper from "../components/LayoutWrapper";
 
-export default function () {
-    return (
-        <div className='p-6'>
-            <h1 className='text-2xl font-bold'>library Page</h1>
+const Page = () => {
+  return (
+    <LayoutWrapper>
+      <div className="flex flex-grow p-8">
+        <div className="w-full">
+          <h1 className="text-3xl font-bold text-black">LIbrary Page</h1>
         </div>
-    );
-}
+      </div>
+    </LayoutWrapper>
+  );
+};
+
+export default Page;
