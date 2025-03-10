@@ -7,7 +7,7 @@ type AuthContextType = {
   user: any;
   role: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, role: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -36,48 +36,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     getUserData();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, role: string) => {
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName }, // ✅ Store full name in metadata
+        data: { full_name: fullName, role }, // ✅ Store full_name & role in metadata
       },
     });
 
     if (error) throw error;
     setUser(data.user);
 
-    // Fetch user role after signing up
-    const { data: userData } = data.user ? await supabase
+    // Assign the selected role in the database
+    await supabase
       .from("users")
-      .select("roles(name)")
-      .eq("id", data.user.id)
-      .single() : { data: null };
+      .update({ role_id: (await getRoleId(role)) })
+      .eq("id", data.user?.id);
+  };
 
-    setRole(userData?.roles?.[0]?.name || null);
+  // Fetch role ID from the database
+  const getRoleId = async (role: string) => {
+    const { data } = await supabase
+      .from("roles")
+      .select("id")
+      .eq("name", role)
+      .single();
+
+    return data?.id;
   };
 
   const signIn = async (email: string, password: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     setUser(data.user);
-  
+
     // Fetch user role
     const { data: userData } = await supabase
       .from("users")
       .select("roles(name)")
       .eq("id", data.user.id)
       .single();
-  
+
     const role = userData?.roles?.[0]?.name;
     if (role !== "Teacher" && role !== "Admin") {
       throw new Error("You are not authorized to log in.");
     }
-  
+
     setRole(role);
   };
-  
 
   const signOut = async () => {
     await supabase.auth.signOut();

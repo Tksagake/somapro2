@@ -2,7 +2,7 @@
 
 import { FiUsers, FiDollarSign, FiBookOpen } from "react-icons/fi";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import Sidebar from "../components/sidebar";
+import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
 const stats = [
