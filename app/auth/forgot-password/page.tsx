@@ -19,7 +19,7 @@ export default function ForgotPassword() {
       });
 
       if (error) throw error;
-      setMessage("Password reset link sent! Check your inbox.");
+      setMessage("✅ Password reset link sent! Check your inbox.");
     } catch (error) {
       setMessage((error as Error).message);
     }
@@ -30,12 +30,13 @@ export default function ForgotPassword() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#15202B]">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-bold text-center text-black mb-6">Reset Password</h2>
+        <h2 className="text-3xl font-bold text-center text-black mb-6">Forgot Password</h2>
         <p className="text-center text-gray-600 mb-4">
-          Enter your email, and we'll send you a link to reset your password.
+          Enter your email and we'll send you a link to reset your password.
         </p>
 
         <form onSubmit={handleReset} className="space-y-6">
+          {/* Instagram-style input */}
           <div className="relative">
             <input
               type="email"
@@ -53,6 +54,7 @@ export default function ForgotPassword() {
             </label>
           </div>
 
+          {/* Button */}
           <button
             type="submit"
             className="w-full bg-black text-white py-2 rounded-lg font-semibold hover:bg-gray-900 transition"
@@ -62,8 +64,10 @@ export default function ForgotPassword() {
           </button>
         </form>
 
+        {/* Success/Error Message */}
         {message && <p className="text-center text-sm text-gray-700 mt-4">{message}</p>}
 
+        {/* Back to Login */}
         <p className="text-center mt-4 text-gray-600">
           <a href="/auth/login" className="text-blue-500 hover:underline">Back to Login</a>
         </p>
