@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "../../context/AuthContext";
+import { useRouter } from "next/navigation"; // ✅ Import router for redirection
+import { useAuth } from "../../context/AuthContext"; // ✅ Use absolute import
 
 export default function Login() {
   const { signIn } = useAuth();
+  const router = useRouter(); // ✅ Initialize router
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -13,6 +15,9 @@ export default function Login() {
     try {
       await signIn(email, password);
       alert("Logged in successfully!");
+
+      // ✅ Redirect user to Dashboard
+      router.push("/dashboard");
     } catch (error) {
       alert((error as Error).message);
     }
