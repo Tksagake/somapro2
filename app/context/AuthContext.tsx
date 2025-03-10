@@ -7,6 +7,7 @@ type AuthContextType = {
   user: any;
   role: string | null;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -22,11 +23,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(data.user);
 
       if (data.user) {
-        const { data: userData } = await supabase
+        const { data: userData } = data.user ? await supabase
           .from("users")
           .select("roles(name)")
           .eq("id", data.user.id)
-          .single();
+          .single() : { data: null };
 
         setRole(userData?.roles?.[0]?.name || null);
       }
@@ -34,6 +35,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     getUserData();
   }, []);
+
+  const signUp = async (email: string, password: string, fullName: string) => {
+    const { error, data } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName }, // ✅ Store full name in metadata
+      },
+    });
+
+    if (error) throw error;
+    setUser(data.user);
+
+    // Fetch user role after signing up
+    const { data: userData } = data.user ? await supabase
+      .from("users")
+      .select("roles(name)")
+      .eq("id", data.user.id)
+      .single() : { data: null };
+
+    setRole(userData?.roles?.[0]?.name || null);
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
@@ -56,7 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, role, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
