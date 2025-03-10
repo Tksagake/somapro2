@@ -5,10 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabase";
 
-const signUp = async (email: string, password: string, fullName: string, role: string) => {
-  // Your signUp logic here
-};
-
 export default function Signup() {
   const { signUp } = useAuth();
   const router = useRouter();
@@ -32,7 +28,6 @@ export default function Signup() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Assuming the `signUp` function expects (email, password, fullName)
       await signUp(email, password, fullName, role);
       alert("Signup successful! You can now log in.");
       router.push("/auth/login");
