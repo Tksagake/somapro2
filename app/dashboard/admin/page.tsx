@@ -16,12 +16,19 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function fetchUsers() {
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, full_name, email, roles(name)");
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("id, full_name, email, roles(name)");
 
-      if (error) console.error(error);
-      else setUsers(data);
+        if (error) {
+          console.error("Error fetching users:", error);
+        } else {
+          setUsers(data);
+        }
+      } catch (error) {
+        console.error("Unexpected error fetching users:", error);
+      }
     }
 
     fetchUsers();
@@ -29,16 +36,30 @@ export default function AdminDashboard() {
 
   const promoteToAdmin = async (userId: string) => {
     setLoading(true);
-    const response = await fetch("/api/promote-user", {
-      method: "POST",
-      body: JSON.stringify({ userId, newRole: "Admin" }),
-      headers: { "Content-Type": "application/json" },
-    });
+    try {
+      const response = await fetch("/api/promote-user", {
+        method: "POST",
+        body: JSON.stringify({ userId, newRole: "Admin" }),
+        headers: { "Content-Type": "application/json" },
+      });
 
-    if (response.ok) alert("User promoted to Admin!");
-    else alert("Error promoting user");
-
-    setLoading(false);
+      if (response.ok) {
+        alert("User promoted to Admin!");
+        // Optionally, refetch users to update the UI
+        const updatedUsers = users.map(user =>
+          user.id === userId ? { ...user, roles: [...user.roles, { name: "Admin" }] } : user
+        );
+        setUsers(updatedUsers);
+      } else {
+        const errorData = await response.json();
+        alert(`Error promoting user: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Unexpected error promoting user:", error);
+      alert("Unexpected error promoting user");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
