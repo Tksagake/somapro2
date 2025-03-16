@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useState, useEffect } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import LayoutWrapper from "@/app/components/LayoutWrapper";
@@ -26,12 +26,8 @@ export default function AdmissionPage() {
     id_document_url: "",
   });
 
-  const [grades, setGrades] = useState<{ id: string; grade_name: string }[]>([]);
-  const [streams, setStreams] = useState<{ id: string; stream_name: string; grade_id: string }[]>([]);
-  const [subjects, setSubjects] = useState<{ id: string; subject_name: string }[]>([]);
-  const [selectedGrade, setSelectedGrade] = useState<string>("");
-  const [selectedStream, setSelectedStream] = useState<string>("");
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<{ subject_id: string }[]>([]);
+  const [streams, setStreams] = useState<{ stream_id: string }[]>([]);
   const [guardians, setGuardians] = useState([{
     guardian_name: "",
     phone_number_1: "",
@@ -48,231 +44,463 @@ export default function AdmissionPage() {
     medical_certificate_url: "",
   });
 
-  // Fetch grades and subjects on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch grades
-        const { data: gradesData, error: gradesError } = await supabase
-          .from("grades")
-          .select("id, grade_name");
+  const [availableSubjects, setAvailableSubjects] = useState<{ id: string; subject_name: string }[]>([]);
+  const [availableGrades, setAvailableGrades] = useState<{ id: string; grade_name: string }[]>([]);
+  const [availableStreams, setAvailableStreams] = useState<{ id: string; stream_name: string }[]>([]);
 
-        if (gradesError) throw gradesError;
-        setGrades(gradesData || []);
-
-        // Fetch subjects
-        const { data: subjectsData, error: subjectsError } = await supabase
-          .from("subjects")
-          .select("id, subject_name");
-
-        if (subjectsError) throw subjectsError;
-        setSubjects(subjectsData || []);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Fetch streams when a grade is selected
-  useEffect(() => {
-    const fetchStreams = async () => {
-      if (selectedGrade) {
-        try {
-          const { data: streamsData, error: streamsError } = await supabase
-            .from("streams")
-            .select("id, stream_name, grade_id")
-            .eq("grade_id", selectedGrade);
-
-          if (streamsError) throw streamsError;
-          setStreams(streamsData || []);
-        } catch (error) {
-          console.error("Error fetching streams:", error);
-        }
-      }
-    };
-
-    fetchStreams();
-  }, [selectedGrade]);
-
-  const handleChange = (e: { target: { name: any; value: any; }; }) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setStudent((prevStudent) => ({ ...prevStudent, [name]: value }));
   };
 
-  const handleGradeChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setSelectedGrade(e.target.value);
-    setSelectedStream(""); // Reset stream when grade changes
+  const handleSubjectChange = (index: number, e: ChangeEvent<HTMLSelectElement>) => {
+    const { value } = e.target;
+    const newSubjects = [...subjects];
+    newSubjects[index] = { subject_id: value };
+    setSubjects(newSubjects);
   };
 
-  const handleStreamChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setSelectedStream(e.target.value);
+  const handleStreamChange = (index: number, e: ChangeEvent<HTMLSelectElement>) => {
+    const { value } = e.target;
+    const newStreams = [...streams];
+    newStreams[index] = { stream_id: value };
+    setStreams(newStreams);
   };
 
-  const handleSubjectChange = (subjectId: string) => {
-    setSelectedSubjects((prev) =>
-      prev.includes(subjectId)
-        ? prev.filter((id) => id !== subjectId) // Deselect if already selected
-        : [...prev, subjectId] // Select if not already selected
-    );
-  };
-
-  const handleGuardianChange = (index: number, e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>) => {
+  const handleGuardianChange = (index: number, e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const newGuardians = [...guardians];
     newGuardians[index] = { ...newGuardians[index], [name]: value };
     setGuardians(newGuardians);
   };
 
-  const handleMedicalChange = (e: { target: { name: any; value: any; }; }) => {
+  const handleMedicalChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setMedicalRecord((prevRecord) => ({ ...prevRecord, [name]: value }));
+  };
+
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>, fieldName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const filePath = `${fieldName}/${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage.from('edu360-uploads').upload(filePath, file);
+
+    if (error) {
+      console.error("Error uploading file:", error.message);
+      alert("Error uploading file.");
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('edu360-uploads').getPublicUrl(filePath);
+    const fileUrl = publicUrl;
+    if (fieldName === "medical_certificate_url") {
+      setMedicalRecord((prevRecord) => ({ ...prevRecord, medical_certificate_url: fileUrl }));
+    } else {
+      setStudent((prevStudent) => ({ ...prevStudent, [fieldName]: fileUrl }));
+    }
   };
 
   const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
 
-    // Insert student data
-    const { data: studentData, error: studentError } = await supabase
-      .from("students")
-      .insert([student])
-      .select();
+    try {
+      // Insert student data
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .insert([student])
+        .select();
 
-    if (studentError) {
-      console.error("Error admitting student:", studentError);
-      alert("Error admitting student.");
-      return;
-    }
+      if (studentError) throw new Error(studentError.message || "Error admitting student");
 
-    const studentId = studentData[0].id;
+      const studentId = studentData[0].id;
 
-    // Insert grade and stream
-    if (selectedGrade && selectedStream) {
+      // Insert subjects
+      const subjectInserts = subjects.map((subject) => ({
+        student_id: studentId,
+        subject_id: subject.subject_id,
+      }));
+      const { error: subjectError } = await supabase
+        .from("student_subjects")
+        .insert(subjectInserts);
+
+      if (subjectError) throw new Error(subjectError.message || "Error inserting subjects");
+
+      // Insert streams
+      const streamInserts = streams.map((stream) => ({
+        student_id: studentId,
+        stream_id: stream.stream_id,
+      }));
       const { error: streamError } = await supabase
         .from("student_streams")
-        .insert([{ student_id: studentId, stream_id: selectedStream }]);
+        .insert(streamInserts);
 
-      if (streamError) {
-        console.error("Error inserting stream:", streamError);
+      if (streamError) throw new Error(streamError.message || "Error inserting streams");
+
+      // Insert guardians
+      const guardianInserts = guardians.map((guardian) => ({
+        student_id: studentId,
+        ...guardian,
+      }));
+      const { error: guardianError } = await supabase
+        .from("parents_guardians")
+        .insert(guardianInserts);
+
+      if (guardianError) throw new Error(guardianError.message || "Error inserting guardians");
+
+      // Insert medical records
+      const { error: medicalError } = await supabase
+        .from("medical_records")
+        .insert([{ student_id: studentId, ...medicalRecord }]);
+
+      if (medicalError) throw new Error(medicalError.message || "Error inserting medical records");
+
+      alert("Student admitted successfully!");
+      router.push("/students");
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error submitting data:", error.message);
+      } else {
+        console.error("Error submitting data:", error);
+      }
+      alert("Error submitting data: " + ((error as Error).message || "Unknown error occurred."));
+    }
+  };
+
+  const fetchAvailableOptions = async () => {
+    try {
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from("subjects")
+        .select("id, subject_name");
+
+      if (subjectsError) throw subjectsError;
+      setAvailableSubjects(subjectsData);
+
+      const { data: gradesData, error: gradesError } = await supabase
+        .from("grades")
+        .select("id, grade_name");
+
+      if (gradesError) throw gradesError;
+      setAvailableGrades(gradesData);
+
+      const { data: streamsData, error: streamsError } = await supabase
+        .from("streams")
+        .select("id, stream_name");
+
+      if (streamsError) throw streamsError;
+      setAvailableStreams(streamsData);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error fetching available options:", error.message);
+      } else {
+        console.error("Error fetching available options:", error);
       }
     }
-
-    // Insert subjects
-    const subjectInserts = selectedSubjects.map((subjectId) => ({
-      student_id: studentId,
-      subject_id: subjectId,
-    }));
-    const { error: subjectError } = await supabase
-      .from("student_subjects")
-      .insert(subjectInserts);
-
-    if (subjectError) {
-      console.error("Error inserting subjects:", subjectError);
-    }
-
-    // Insert guardians
-    const guardianInserts = guardians.map((guardian) => ({
-      student_id: studentId,
-      ...guardian,
-    }));
-    const { error: guardianError } = await supabase
-      .from("parents_guardians")
-      .insert(guardianInserts);
-
-    if (guardianError) {
-      console.error("Error inserting guardians:", guardianError);
-    }
-
-    // Insert medical records
-    const { error: medicalError } = await supabase
-      .from("medical_records")
-      .insert([{ student_id: studentId, ...medicalRecord }]);
-
-    if (medicalError) {
-      console.error("Error inserting medical records:", medicalError);
-    }
-
-    alert("Student admitted successfully!");
-    router.push("/students");
   };
+
+  useEffect(() => {
+    fetchAvailableOptions();
+  }, []);
 
   return (
     <LayoutWrapper>
-      <div className="p-6 max-w-4xl mx-auto bg-gray-100 min-h-screen text-gray-800">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900">Admit New Student</h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Student Details */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Student Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Student details inputs */}
-              {/* ... (same as before) */}
+      <div className="p-6 mx-auto bg-gray-100 min-h-screen text-gray-800 max-w-4xl">
+        <h1 className="text-2xl font-bold mb-4 text-gray-900">Admit New Student</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Student Details */}
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">Student Details</h2>
+              <input
+                type="text"
+                name="first_name"
+                placeholder="First Name"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+                required
+              />
+              <input
+                type="text"
+                name="middle_name"
+                placeholder="Middle Name"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+              />
+              <input
+                type="text"
+                name="last_name"
+                placeholder="Last Name"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+                required
+              />
+              <input
+                type="date"
+                name="date_of_birth"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+                required
+              />
+              <select
+                name="gender"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+              >
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+              <input
+                type="text"
+                name="nationality"
+                placeholder="Nationality"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+                required
+              />
+              <input
+                type="text"
+                name="county"
+                placeholder="County"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+                required
+              />
+              <input
+                type="text"
+                name="religion"
+                placeholder="Religion"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+              />
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+              />
+              <input
+                type="text"
+                name="phone_number"
+                placeholder="Phone Number"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+              />
+              <input
+                type="text"
+                name="admission_number"
+                placeholder="Admission Number"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+                required
+              />
+              <input
+                type="text"
+                name="id_number"
+                placeholder="ID Number"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+              />
+              <input
+                type="text"
+                name="kcpe_index_number"
+                placeholder="KCPE Index Number"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+              />
+              <select
+                name="marital_status"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={handleChange}
+              >
+                <option value="Single">Single</option>
+                <option value="Married">Married</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
-          </div>
 
-          {/* Class (Grade and Stream) */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Class</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select
-                name="grade"
-                className="w-full p-2 border rounded bg-white text-black"
-                onChange={handleGradeChange}
-                value={selectedGrade}
-                required
-              >
-                <option value="">Select Grade</option>
-                {grades.map((grade) => (
-                  <option key={grade.id} value={grade.id}>
-                    {grade.grade_name}
-                  </option>
-                ))}
-              </select>
-              <select
-                name="stream"
-                className="w-full p-2 border rounded bg-white text-black"
-                onChange={handleStreamChange}
-                value={selectedStream}
-                required
-              >
-                <option value="">Select Stream</option>
-                {streams.map((stream) => (
-                  <option key={stream.id} value={stream.id}>
-                    {stream.stream_name}
-                  </option>
-                ))}
-              </select>
+            {/* Attachments */}
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">Attachments</h2>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  name="passport_photo_url"
+                  placeholder="Passport Photo URL"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  value={student.passport_photo_url}
+                  readOnly
+                />
+                <label className="bg-blue-500 text-white p-2 rounded cursor-pointer">
+                  Upload
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, "passport_photo_url")}
+                  />
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  name="id_document_url"
+                  placeholder="ID Document URL"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  value={student.id_document_url}
+                  readOnly
+                />
+                <label className="bg-blue-500 text-white p-2 rounded cursor-pointer">
+                  Upload
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, "id_document_url")}
+                  />
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  name="medical_certificate_url"
+                  placeholder="Medical Certificate URL"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  value={medicalRecord.medical_certificate_url}
+                  readOnly
+                />
+                <label className="bg-blue-500 text-white p-2 rounded cursor-pointer">
+                  Upload
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, "medical_certificate_url")}
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
           {/* Subjects */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Subjects</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {subjects.map((subject) => (
-                <label key={subject.id} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    name="subject"
-                    value={subject.id}
-                    checked={selectedSubjects.includes(subject.id)}
-                    onChange={() => handleSubjectChange(subject.id)}
-                    className="form-checkbox h-5 w-5 text-blue-600"
-                  />
-                  <span>{subject.subject_name}</span>
-                </label>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Subjects</h2>
+            {subjects.map((subject, index) => (
+              <select
+                key={index}
+                name="subject_id"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={(e) => handleSubjectChange(index, e)}
+                required
+              >
+                <option value="">Select Subject</option>
+                {availableSubjects.map((subj) => (
+                  <option key={subj.id} value={subj.id}>
+                    {subj.subject_name}
+                  </option>
+                ))}
+              </select>
+            ))}
+            <button
+              type="button"
+              onClick={() => setSubjects([...subjects, { subject_id: "" }])}
+              className="w-full bg-gray-300 text-gray-800 p-2 rounded"
+            >
+              Add Subject
+            </button>
+          </div>
+
+          {/* Streams and Grade */}
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Streams and Grade</h2>
+            <select
+              name="grade_id"
+              className="w-full p-2 border rounded bg-white text-black"
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Grade</option>
+              {availableGrades.map((grade) => (
+                <option key={grade.id} value={grade.id}>
+                  {grade.grade_name}
+                </option>
               ))}
-            </div>
+            </select>
+            {streams.map((stream, index) => (
+              <select
+                key={index}
+                name="stream_id"
+                className="w-full p-2 border rounded bg-white text-black"
+                onChange={(e) => handleStreamChange(index, e)}
+                required
+              >
+                <option value="">Select Stream</option>
+                {availableStreams.map((strm) => (
+                  <option key={strm.id} value={strm.id}>
+                    {strm.stream_name}
+                  </option>
+                ))}
+              </select>
+            ))}
+            <button
+              type="button"
+              onClick={() => setStreams([...streams, { stream_id: "" }])}
+              className="w-full bg-gray-300 text-gray-800 p-2 rounded"
+            >
+              Add Stream
+            </button>
           </div>
 
           {/* Guardians */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Guardians</h2>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Guardians</h2>
             {guardians.map((guardian, index) => (
-              <div key={index} className="space-y-4 mb-4">
-                {/* Guardian inputs */}
-                {/* ... (same as before) */}
+              <div key={index} className="space-y-2">
+                <input
+                  type="text"
+                  name="guardian_name"
+                  placeholder="Guardian Name"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  onChange={(e) => handleGuardianChange(index, e)}
+                  required
+                />
+                <input
+                  type="text"
+                  name="phone_number_1"
+                  placeholder="Phone Number 1"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  onChange={(e) => handleGuardianChange(index, e)}
+                  required
+                />
+                <input
+                  type="text"
+                  name="phone_number_2"
+                  placeholder="Phone Number 2"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  onChange={(e) => handleGuardianChange(index, e)}
+                />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  onChange={(e) => handleGuardianChange(index, e)}
+                />
+                <input
+                  type="text"
+                  name="residence"
+                  placeholder="Residence"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  onChange={(e) => handleGuardianChange(index, e)}
+                />
+                <select
+                  name="relationship"
+                  className="w-full p-2 border rounded bg-white text-black"
+                  onChange={(e) => handleGuardianChange(index, e)}
+                >
+                  <option value="Father">Father</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Guardian">Guardian</option>
+                  <option value="Sponsor">Sponsor</option>
+                </select>
               </div>
             ))}
             <button
@@ -292,10 +520,37 @@ export default function AdmissionPage() {
           </div>
 
           {/* Medical Records */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Medical Records</h2>
-            {/* Medical records inputs */}
-            {/* ... (same as before) */}
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Medical Records</h2>
+            <select
+              name="blood_group"
+              className="w-full p-2 border rounded bg-white text-black"
+              onChange={handleMedicalChange}
+            >
+              <option value="">Select Blood Group</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+            </select>
+            <input
+              type="text"
+              name="allergies"
+              placeholder="Allergies"
+              className="w-full p-2 border rounded bg-white text-black"
+              onChange={handleMedicalChange}
+            />
+            <input
+              type="text"
+              name="medical_conditions"
+              placeholder="Medical Conditions"
+              className="w-full p-2 border rounded bg-white text-black"
+              onChange={handleMedicalChange}
+            />
           </div>
 
           <button
